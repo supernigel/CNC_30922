@@ -21,7 +21,7 @@ public class EntranceScript : MonoBehaviour {
 		tryCreate.transform.name = "tryCreate";
 		*/
 		gameObject.AddComponent("NCCodeFormat");
-		NCCodeFormat_Script = gameObject.GetComponent<NCCodeFormat>();
+		//NCCodeFormat_Script = gameObject.GetComponent<NCCodeFormat>();
 	}
 
 	void Load(string filename)
@@ -31,7 +31,7 @@ public class EntranceScript : MonoBehaviour {
 			SourceCode.Clear();
 			SourceCode = null;
 		}
-		SourceCode = NCCodeFormat_Script.AllCode(filename);
+		//SourceCode = NCCodeFormat_Script.AllCode(filename);
 		Debug.Log(SourceCode.Count);
 	}
 	

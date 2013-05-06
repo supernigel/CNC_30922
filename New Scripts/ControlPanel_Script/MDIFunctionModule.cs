@@ -115,6 +115,12 @@ public class MDIFunctionModule : MonoBehaviour {
 			{
 				
 			}
+			Main.ProgEDITCusorV=0;
+			Main.ProgEDITCusorH=0;
+			Main.StartRow=0;
+			Main.EndRow=9;
+		    Main.SelectStart=0;
+		    Main.SelectEnd=0;
 		}
 	}
 	

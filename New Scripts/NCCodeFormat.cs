@@ -22,8 +22,8 @@ public class NCCodeFormat : MonoBehaviour {
 	string test_str = "";
 	string text_field = "O10";
 	List<string> codestr = new List<string>();
-	List<List<string>> all_code_test = new List<List<string>>();
-		
+	List<string> all_code_test = new List<string>();
+	ControlPanel Main;	
 	//文件路径
 	string document_path = "";
 
@@ -33,7 +33,8 @@ public class NCCodeFormat : MonoBehaviour {
 	}
 	
 	// Use this for initialization
-	void Start () {	
+	void Start () {
+		Main = gameObject.GetComponent<ControlPanel>();
 		//codestr = CodeFormat("G10G30s768G12f199z723i+23j-234");
 		//codestr = CodeFormat("N30#[#10]=#4*COS[45*#[#23]]-#5*SIN[45]");
 		//codestr = CodeFormat("N38IF[#1LT370]GOTO26");
@@ -84,10 +85,10 @@ public class NCCodeFormat : MonoBehaviour {
 		if(GUI.Button(new Rect(10, 550, 300, 30), "启动"))
 		{
 			test_str = "";
-			TestFunction(text_field);
+			//TestFunction(text_field);
 		}
 	}
-	
+	/*
 	/// <summary>
 	/// 测试用的函数，通过GUI中的“启动”按钮启动
 	/// </summary>
@@ -116,7 +117,7 @@ public class NCCodeFormat : MonoBehaviour {
 			}
 		}
 	}
-	
+	*/
 	
 	/// <summary>
 	/// 获取一个完整NC文件的的NC代码，并进行格式化
@@ -129,10 +130,11 @@ public class NCCodeFormat : MonoBehaviour {
 	/// <param name='file_name'>
 	/// NC 程序的程序名，O0010可以简写为O10
 	/// </param>
-	public List<List<string>> AllCode (string file_name) 
+	public List<string> AllCode (string file_name) 
 	{
+		
 		//Initialize the return value. 
-		List<List<string>> all_code_list = new List<List<string>>();
+		List<string> all_code_list = new List<string>();
 		//Temporal code data. 
 		List<string> all_code_temp = CodeLoad(file_name);
 		//Temporal code segment data. 
@@ -145,7 +147,7 @@ public class NCCodeFormat : MonoBehaviour {
 				temp_str_list = new List<string>();
 				temp_str_list = CodeFormat(code_str);
 				if(temp_str_list.Count > 0)
-					all_code_list.Add(temp_str_list);
+					all_code_list.AddRange(temp_str_list);
 			}
 		}
 		return all_code_list;
@@ -336,6 +338,8 @@ public class NCCodeFormat : MonoBehaviour {
 						//Acquire original code.
 						if(success_open)
 						{
+							Main.RealListNum = file_name_list.IndexOf(temp_name) + 1;
+							Main.ProgramNum = Convert.ToInt32(temp_name.Trim('O'));
 							FileStream code_file_stream = new FileStream(file_path, FileMode.Open, FileAccess.Read); 
 							StreamReader code_SR = new StreamReader(code_file_stream);
 							string s_Line = code_SR.ReadLine();

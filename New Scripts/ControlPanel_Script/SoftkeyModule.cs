@@ -9,6 +9,8 @@ public class SoftkeyModule : MonoBehaviour {
 	ControlPanel Main;
 	CooSystem CooSystem_script;
 	MDIEditModule MDIEdit_Script;
+	//使用新编写的NC代码格式化文件 董帅 2013-3-30
+	NCCodeFormat NCCodeFormat_Script;
 	//位置界面功能完善---宋荣 ---03.09
 	PositionModule Pos_Script;
 	MDIInputModule MDIInput_Script;
@@ -18,6 +20,7 @@ public class SoftkeyModule : MonoBehaviour {
 	string document_path = "";
 	bool file_open = false;
 	public bool EditList_display_switcher = false;
+	Dictionary<char,float> strlenmap;
 	//Improvement for the RPOG part by Eric---03.28
 	
 	void Awake ()
@@ -33,8 +36,12 @@ public class SoftkeyModule : MonoBehaviour {
 		//位置界面功能完善---宋荣 ---03.09
 		Pos_Script=gameObject.GetComponent<PositionModule>();
 	    MDIInput_Script=gameObject.GetComponent<MDIInputModule>();
+		//使用新编写的NC代码格式化文件 董帅 2013-3-30
+		NCCodeFormat_Script = gameObject.GetComponent<NCCodeFormat>();
 		//位置界面功能完善---宋荣 ---03.09
 		FileInfoInitialize();
+		//calsize字典初始化 陈晓威
+		StrLenMapInitialize();
 	}
 	
 	public void Softkey () 
@@ -268,12 +275,84 @@ public class SoftkeyModule : MonoBehaviour {
 				//日期2013-3-14
 				if(Main.ProgEDITProg)
 				{
-					if (Main.ProgEDITFlip==2)
-				       Main.ProgEDITFlip=3;
-			       else if (Main.ProgEDITFlip==3)   
+					//Debug.Log(Main.ProgEDITFlip);
+					//选择
+					if(Main.ProgEDITFlip==2)
+					{
+				       Main.IsSelect=true;
+						//Debug.Log("bV:"+Main.ProgEDITCusorV);
+				        //Debug.Log("bH:"+Main.ProgEDITCusorH);
+						
+						if(Main.ProgEDITCusorH > 0)
+						{
+						    Main.SelStartCurV = Main.ProgEDITCusorV;
+							Main.SelStartCurH = Main.ProgEDITCusorH - 1;
+						}
+						else if(Main.ProgEDITCusorV > 0)
+						{
+						    Main.SelStartCurV = Main.ProgEDITCusorV - 1;
+							int row_begin = 0;
+		                    int row_end;
+		                    int row_length;
+		                    if(Main.ProgEDITCusorV > 1)
+		                        row_begin = Main.SeparatePos[Main.ProgEDITCusorV - 2];
+		                    else
+		                        row_begin = 0;		                 
+		                    row_end = Main.SeparatePos[Main.ProgEDITCusorV - 1];		                 
+		                    row_length = row_end - row_begin;          
+							Main.SelStartCurH = row_length - 1;
+						}
+						else
+						{
+						    Main.SelStartCurV = 0;
+							Main.SelStartCurH = 0;
+						}
+						//Debug.Log("V:"+Main.SelStartCurV);
+				       // Debug.Log("H:"+Main.SelStartCurH);
+					    Main.ProgEDITFlip=3;
+					}
+			       else if ((Main.ProgEDITFlip==3)||(Main.ProgEDITFlip==50))
+				   { //取消选择
+					   Main.IsSelect=false;	
+					   Main.SelectStart = Main.SelectEnd;
 				       Main.ProgEDITFlip=2;
+					}
 		           else if (Main.ProgEDITFlip==5)
-				       Main.ProgEDITFlip=2;
+				   {
+				      //取消全选择 陈晓威
+						Main.IsSelect=false;
+						Main.ProgEDITFlip=2;
+						Main.SelectStart=0;
+						Main.ProgEDITCusorV=Main.SelStartCurV;
+						Main.ProgEDITCusorH=Main.SelStartCurH;
+						if(Main.ProgEDITCusorV>0)
+							Main.SelectStart=Main.SeparatePos[Main.ProgEDITCusorV-1]+Main.ProgEDITCusorH;
+						else
+							Main.SelectStart=Main.ProgEDITCusorH;
+						Main.SelectEnd=Main.SelectStart;	
+						//Main.SelectEnd=Main.SelectStart;	
+						//Main.StartRow = 0;
+						//Main.EndRow = 9;
+				   } else if (Main.ProgEDITFlip==7){
+				      //粘贴buffer 陈晓威
+						if(Main.CodeForAll.Count==1&&Main.CodeForAll[0]==";")
+						{
+							Main.CodeForAll.RemoveAt(0);
+							Main.TotalCodeNum--;
+						}				
+						int pos=Main.SelectStart+1;
+						int buffer_index=0;
+						while(buffer_index<Main.CodeBuffer.Count){
+							if(pos>Main.TotalCodeNum-1)
+							Main.CodeForAll.Add(Main.CodeBuffer[buffer_index]);
+							else
+							Main.CodeForAll.Insert(pos++,Main.CodeBuffer[buffer_index]);
+							buffer_index++;
+						}
+						Main.TotalCodeNum=Main.CodeForAll.Count;
+						Main.ProgEDITFlip=2;
+						//Main.CodeBuffer
+					}
 					else if ((Main.ProgEDITFlip==6)||(Main.ProgEDITFlip==4))//内容--增加程序底部按钮显示“8”，用于实现“替换”功能，姓名--刘旋，时间--2013-3-20
 						Main.ProgEDITFlip=8;
 				}
@@ -298,6 +377,12 @@ public class SoftkeyModule : MonoBehaviour {
 			if(Main.ProgMDI)//内容--MDI模式下，程序界面，第一个按钮的功能，姓名--刘旋，时间--2013-4-22
 			{
 				Main.ProgMDIFlip=1;
+				MDIEdit_Script.CodeEdit();
+				//将光标的位置索引初始化
+				Main.ProgEDITCusorH=0;
+				Main.ProgEDITCusorV=0;
+				Main.SelectStart = 0;
+				Main.SelectEnd = 0;
 			}
 			if(Main.ProgDNC)//内容--DNC模式下，程序界面，第一个按钮的功能，姓名--刘旋，时间--2013-4-22
 			{
@@ -398,8 +483,34 @@ public class SoftkeyModule : MonoBehaviour {
 			{//2 level
 				if(Main.ProgEDITProg)
 				{
-					if (Main.ProgEDITFlip==2)
-				       Main.ProgEDITFlip=5;
+					
+					//到最后 陈晓威
+					if (Main.ProgEDITFlip==3){
+					calcSepo(Main.CodeForAll,Main.SeparatePos,302f);
+				     Main.ProgEDITFlip=50;
+					 Main.SelectEnd=Main.CodeForAll.Count-1;
+					int j=0; 
+					while(Main.SeparatePos[j]<Main.CodeForAll.Count&&Main.SeparatePos[j]!=0)j++;
+					//j--;
+					Main.StartRow=j/9*9;
+					Main.EndRow=Main.StartRow+9;
+					Main.ProgEDITCusorV=j;
+					Main.ProgEDITCusorH=Main.CodeForAll.Count-Main.SeparatePos[j-1];
+					//Debug.Log("lastV:"+Main.ProgEDITCusorV);
+					//Debug.Log("lastH:"+Main.ProgEDITCusorH);
+						
+						
+					}
+					
+					//全选择 陈晓威
+					else if (Main.ProgEDITFlip==2){
+				     Main.ProgEDITFlip=5;
+					 Main.SelStartCurH=Main.ProgEDITCusorH;
+					 Main.SelStartCurV=Main.ProgEDITCusorV;
+					 Main.SelectStart=0;
+					 Main.SelectEnd=Main.CodeForAll.Count-1;
+					
+					}
 					else if (Main.ProgEDITFlip==0)
 					{
 						Main.ProgEDITList=true;
@@ -410,6 +521,7 @@ public class SoftkeyModule : MonoBehaviour {
 					{
 						O_Search();
 						Locate_At_Position(Main.RealListNum);
+						Main.needRecalc=true;
 					}
 				}
 				if(Main.ProgEDITList)
@@ -426,6 +538,7 @@ public class SoftkeyModule : MonoBehaviour {
 						//O检索
 						O_Search();	
 						Locate_At_Position(Main.RealListNum);
+						Main.needRecalc=true;
 					}
 				}
 			}//2 level
@@ -455,7 +568,13 @@ public class SoftkeyModule : MonoBehaviour {
 			
 			if(Main.ProgMDI)
 			{
-				Main.ProgMDIFlip=0;
+				Main.ProgMDIFlip=1;
+				MDIEdit_Script.CodeEdit();
+				//将光标的位置索引初始化
+				Main.ProgEDITCusorH=0;
+				Main.ProgEDITCusorV=0;
+				Main.SelectStart = 0;
+				Main.SelectEnd = 0;
 			}	
 		}//1 level
 		
@@ -505,6 +624,79 @@ public class SoftkeyModule : MonoBehaviour {
 		   //日期2013-3-14
 			if(Main.ProgEDIT)
 			{
+				
+				//向下检索 ---陈晓威 董帅
+				if(Main.ProgEDITFlip == 1)
+				{
+				    Main.NotFoundWarn = false;
+					string SearchWord = Main.EDITText.text.Trim();
+					//Debug.Log("l"+SearchWord.Length);
+			        //Debug.Log(SearchWord);
+					if(SearchWord.Equals(""))
+					{
+						Main.NotFoundWarn = false;
+						
+					}
+					else
+					{
+					int CurIndex =0;
+					//bool FoundInPage= false;
+					calcSepo(Main.CodeForAll,Main.SeparatePos,302f);
+					//Debug.Log("OKKK");
+					CurIndex = Main.SelectStart + 1;
+					int irow=Main.ProgEDITCusorV;
+					for(CurIndex=Main.SelectStart + 1;CurIndex<Main.CodeForAll.Count;CurIndex++)
+					{
+						if(CurIndex>=Main.SeparatePos[irow])irow++;
+						if(Main.CodeForAll[CurIndex].IndexOf(SearchWord) > -1)break;	
+					}
+					//Debug.Log("irowowo"+irow);	
+					//如果已经找到
+					if(CurIndex<Main.CodeForAll.Count)
+					{
+						Main.NotFoundWarn = false;
+						Main.StartRow=irow/9*9;
+						Main.EndRow=Main.StartRow+9;
+						Main.SelectStart=CurIndex;
+						Main.SelectEnd=Main.SelectStart;
+						Main.ProgEDITCusorV=irow;
+						Main.MDIProgEDITCusorH=Main.SelectStart-Main.SeparatePos[irow-1];	
+					}
+					else
+					{//找不到的情况
+						Main.StartRow=irow/9*9;
+						Main.EndRow=Main.StartRow+9;
+						Main.NotFoundWarn = true;
+						Main.SelectStart = Main.CodeForAll.Count - 1;
+						Main.SelectEnd = Main.SelectStart;
+						Main.ProgEDITCusorV=irow;
+						Main.MDIProgEDITCusorH=Main.SelectStart-Main.SeparatePos[irow-1];			
+					}
+						
+					}
+				
+				}
+				
+				//选择 复制
+				if(Main.ProgEDITFlip == 3 ||Main.ProgEDITFlip == 5||Main.ProgEDITFlip == 50)
+				{
+				    Debug.Log("Main.ProgEDITFlip:"+Main.ProgEDITFlip);
+					Main.CodeBuffer = new List<string>();
+					Main.CodeBuffer.Clear();
+					int SelStart = Main.SelectStart > Main.SelectEnd? Main.SelectEnd:Main.SelectStart;
+					int SelEnd = Main.SelectStart > Main.SelectEnd? Main.SelectStart:Main.SelectEnd;
+					for(int i = SelStart;i <= SelEnd;++i)
+					Main.CodeBuffer.Add(Main.CodeForAll[i]);
+					Main.ProgEDITFlip = 2;
+				    Main.IsSelect = false;
+					Main.SelectStart=Main.SelectEnd;
+					
+				}
+				
+				
+				
+				
+				
 				if(Main.ProgEDITProg)
 				{
 					
@@ -599,14 +791,70 @@ public class SoftkeyModule : MonoBehaviour {
 				if(Main.ProgEDITFlip == 0)
 				{
 					
-				}
+				}//向上检索
 				else if(Main.ProgEDITFlip == 1)
 				{
-					
+					Main.NotFoundWarn = false;
+					string SearchWord = Main.EDITText.text.Trim();	
+					if(SearchWord != "")
+					{
+						int CurIndex = Main.SelectEnd - 1;
+						int i = 0;
+						bool IsFound= false;
+						for(i = CurIndex;i >0 && !IsFound;--i)
+						{
+							if(Main.CodeForAll[i].IndexOf(SearchWord) > -1)
+							{
+							    Main.SelectStart = i;
+								Main.SelectEnd = Main.SelectStart;
+								int j = 0;
+							    while(Main.SeparatePos[j] <= i){++j;}				
+								Main.ProgEDITCusorV = j;
+									
+								//Debug.Log(Main.ProgEDITCusorV+"fff");	
+								if(Main.ProgEDITCusorV > 0)
+									Main.ProgEDITCusorH = i - Main.SeparatePos[Main.ProgEDITCusorV - 1];
+								else
+									Main.ProgEDITCusorH = i;
+							    if(Main.ProgEDITCusorV < Main.StartRow )
+								{
+									Main.StartRow = Main.ProgEDITCusorV;
+									Main.EndRow = Main.StartRow + 9;
+								}
+								IsFound = true;
+							}
+
+						}
+						if(!IsFound)
+						{
+							Main.NotFoundWarn = true;
+							Main.SelectStart = 0;
+							Main.SelectEnd = Main.SelectStart;
+							Main.ProgEDITCusorV = 0;
+							Main.ProgEDITCusorH = 0;
+							Main.StartRow = 0;
+						    Main.EndRow = Main.StartRow + 9;
+		
+						}
+
+					}
 				}
 				else if(Main.ProgEDITFlip == 2)
 				{
 					
+				}
+				else if(Main.ProgEDITFlip == 3||Main.ProgEDITFlip == 5||Main.ProgEDITFlip == 50)
+				{
+					//剪切				
+					Main.CodeBuffer = new List<string>();
+					Main.CodeBuffer.Clear();
+					//Debug.Log("s"+Main.SelectStart+" "+"e"+Main.SelectEnd);
+					//Debug.Log("tot"+Main.CodeForAll.Count);
+					int SelStart = Main.SelectStart > Main.SelectEnd? Main.SelectEnd:Main.SelectStart;
+					int SelEnd = Main.SelectStart > Main.SelectEnd? Main.SelectStart:Main.SelectEnd;
+					for(int i = SelStart;i <= SelEnd;++i)
+					    Main.CodeBuffer.Add(Main.CodeForAll[i]);
+					MDIEdit_Script.DeleteCode();
 				}
 				else 
 				{
@@ -728,7 +976,7 @@ public class SoftkeyModule : MonoBehaviour {
 		
 		if(Main.ProgMenu)
 		{
-			if(Main.ProgEDIT)
+			if(Main.ProgEDIT||Main.ProgMDI)
 			{
 				if(Main.ProgEDITProg)
 				{
@@ -739,6 +987,18 @@ public class SoftkeyModule : MonoBehaviour {
 					//日期--2013-3-14
 					else if (Main.ProgEDITFlip==2)
 				    	Main.ProgEDITFlip=7;//变化内容到此
+					
+					//按了返回-陈晓威
+					else if(Main.ProgEDITFlip==1)
+					{
+						Main.NotFoundWarn = false;
+						Main.ProgEDITCusorV=0;
+						Main.ProgEDITCusorH=0;
+						Main.StartRow=0;
+						Main.EndRow=9;
+						Main.SelectStart=0;
+						Main.SelectEnd=0;
+					}
 				}
 				if(Main.ProgEDITList)
 				{
@@ -761,6 +1021,7 @@ public class SoftkeyModule : MonoBehaviour {
 					Main.ProgAUTOFlip=1;
 				else if(Main.ProgAUTOFlip==5)//“下一段”页，按下“操作”按钮，转到“操作”页
 					Main.ProgAUTOFlip=1;
+				
 			}//增加内容到此
 		}
 		
@@ -1156,8 +1417,10 @@ public class SoftkeyModule : MonoBehaviour {
 		{
 			file_name = Main.InputText;
 		}
+		
 		//从文件加载NC代码
-		List<string> temp_code_list = CodeLoad(file_name);
+		List<string> temp_code_list =new List<string>();
+		temp_code_list = NCCodeFormat_Script.AllCode(file_name);
 		if(temp_code_list.Count > 0)
 		{
 			if(temp_code_list[temp_code_list.Count-1] == "")
@@ -1173,9 +1436,11 @@ public class SoftkeyModule : MonoBehaviour {
 				Main.TotalCodeNum=Main.CodeForAll.Count;
 				//待修改的函数，祝你好运
 				MDIEdit_Script.CodeEdit();
-				Main.ProgEDITCusorH=32f;
-				Main.ProgEDITCusorV=100f;
-				Main.EDITText.text=Main.TempCodeList[0][0];
+				Main.ProgEDITCusorH=0;
+				Main.ProgEDITCusorV=0;
+				Main.SelectStart = 0;
+				Main.SelectEnd = 0;
+				//Main.EDITText.text=Main.TempCodeList[0][0];
 				Main.TextSize=Main.sty_EDITTextField.CalcSize(new GUIContent(Main.EDITText.text));
 				open_success = true;
 				Main.ProgEDITList = false;
@@ -1191,6 +1456,7 @@ public class SoftkeyModule : MonoBehaviour {
 		}
 		Main.InputText="";
 		Main .ProgEDITCusorPos=57f;
+		Main.EDITText.text="";
 	}
 	
 	/// <summary>
@@ -1249,6 +1515,120 @@ public class SoftkeyModule : MonoBehaviour {
 				Main.ProgEDITAt = false;
 		}
 	}
+	
+	public void calcSepo(List<string>codelist,int[]codeSeparatePos,float row_length)
+	{
+		Vector2 word_size = new Vector2(0,0);
+		const float blank_length = 10;
+		float pos_x = 0;
+		int index_str = 0;
+	    float cur_length = 0;
+		//row_length = 302f, 
+		string each_word=null;
+		int irow;
+		cur_length = getStrLen(codelist[0]);
+		for(irow = 0;index_str < codelist.Count ;) 
+	    {
+				each_word = codelist[index_str];   
+			    //word_size = Main.sty_EDITTextField.CalcSize(new GUIContent(each_word));
+				//pos_x = (getStrLen(each_word) + 4)/440f*Main.width + 10f; 
+				//cur_length += (pos_x) ;
+				
+				if((index_str+1<codelist.Count-1)&&codelist[index_str+1] != ";")
+				{
+					float next_wordsize=getStrLen(codelist[index_str+1]);
+					cur_length=cur_length+next_wordsize+blank_length;
+				}
+				++index_str;
+				if(each_word.Equals(";")&&index_str<codelist.Count) 
+				{
+					codeSeparatePos[irow] = index_str;
+					
+					cur_length=getStrLen(codelist[index_str]);
+					++irow;
+				}									
+				else if((cur_length > row_length)&&(index_str<codelist.Count))
+				{
+				    //Debug.Log("superpassindex:"+index_str+" "+codelist[index_str]);
+					codeSeparatePos[irow] = index_str;
+				    //Debug.Log("irow:"+irow);
+					cur_length=getStrLen(codelist[index_str]);
+					++irow;
+				}	
+					
+			
+			
+		}
+		
+		//Debug.Log("calc compelet!"+irow);
+		//int j=0;
+		//while(codeSeparatePos[j]!=0){Debug.Log("sppp"+j+" "+codeSeparatePos[j]+codelist[codeSeparatePos[j]]);j++;}
+	}
+	
+	public float getStrLen(string str)
+	{
+		float conlen=0;
+		char[] temp=str.ToCharArray();
+		for(int i=0;i<temp.Length;i++){
+			try{
+			conlen+=strlenmap[temp[i]];
+			}catch(Exception ee)
+			{
+				Debug.Log(temp[i]+"not found");
+			}
+			
+		}
+		return conlen;	
+		
+	}
+	
+	public void StrLenMapInitialize()
+	{
+		strlenmap=new Dictionary<char, float>();
+		//数字
+		for(int i=0;i<=9;i++)
+			strlenmap.Add((char)('0'+i),9);
+		//字母
+		strlenmap.Add('A',11);
+		strlenmap.Add('B',12);
+		strlenmap.Add('C',12);
+		strlenmap.Add('D',12);
+		strlenmap.Add('E',11);
+		strlenmap.Add('F',10);
+		strlenmap.Add('G',13);
+		strlenmap.Add('H',12);
+		strlenmap.Add('I',4);
+		strlenmap.Add('J',9);
+		strlenmap.Add('K',12);
+		strlenmap.Add('L',10);
+		strlenmap.Add('M',13);
+		strlenmap.Add('N',12);
+		strlenmap.Add('O',13);
+		strlenmap.Add('P',11);
+		strlenmap.Add('Q',13);
+		strlenmap.Add('R',12);
+		strlenmap.Add('S',11);
+		strlenmap.Add('T',10);
+		strlenmap.Add('U',12);
+		strlenmap.Add('V',11);
+		strlenmap.Add('W',17);
+		strlenmap.Add('X',11);
+		strlenmap.Add('Y',10);
+		strlenmap.Add('Z',9);
+		//符号
+		strlenmap.Add('*',7);
+		strlenmap.Add('-',6);
+		strlenmap.Add('/',5);
+		strlenmap.Add('+',10);
+		strlenmap.Add(';',6);
+		strlenmap.Add('.',5);
+		strlenmap.Add('#',9);
+		strlenmap.Add('[',6);
+		strlenmap.Add(']',6);
+		strlenmap.Add('=',10);
+	}
+	
+	
 	
 	// Update is called once per frame
 	void Update () {

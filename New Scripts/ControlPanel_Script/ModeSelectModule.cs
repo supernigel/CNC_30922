@@ -21,6 +21,7 @@ public class ModeSelectModule : MonoBehaviour {
 		if (GUI.Button(new Rect(215f/1000f*Main.width, 716f/1000f*Main.height, 60f/1000f*Main.width, 22f/1000f*Main.height), "", Main.sty_ButtonEmpty))            
 		{
 			Main.MenuDisplay = "编辑";
+			if(!Main.editDisplay)Main.ExchangeVar();
 			Main.t2d_ModeSelect = Main.t2d_ModeSelectEDIT;
 			PlayerPrefs.SetInt("ModeSelect", 1);
 			Main.ProgEDIT = true;
@@ -30,6 +31,7 @@ public class ModeSelectModule : MonoBehaviour {
 			Main.ProgHAN = false;
 			Main.ProgJOG = false;
 			Main.ProgREF = false;
+			Main.editDisplay=true;
 		}
 		
 		if (GUI.Button(new Rect(215f/1000f*Main.width, 693f/1000f*Main.height, 55f/1000f*Main.width, 22f/1000f*Main.height), "", Main.sty_ButtonEmpty))            
@@ -70,10 +72,12 @@ public class ModeSelectModule : MonoBehaviour {
 			Main.ProgHAN = false;
 			Main.ProgJOG = false;
 			Main.ProgREF = false;
+			Main.AutoDisplayFindRows(0,true);
 		}
 		if (GUI.Button(new Rect(280f/1000f*Main.width, 650f/1000f*Main.height, 20f/1000f*Main.width, 40f/1000f*Main.height), "", Main.sty_ButtonEmpty))            
 		{
 			Main.MenuDisplay = "MDI";
+			if(Main.editDisplay)Main.ExchangeVar();
 			Main.t2d_ModeSelect = Main.t2d_ModeSelectMDI;
 			PlayerPrefs.SetInt("ModeSelect", 4);
 			Main.ProgEDIT = false;
@@ -83,6 +87,7 @@ public class ModeSelectModule : MonoBehaviour {
 			Main.ProgHAN = false;
 			Main.ProgJOG = false;
 			Main.ProgREF = false;
+			Main.editDisplay=false;
 		}
 		if (GUI.Button(new Rect(302f/1000f*Main.width, 650f/1000f*Main.height, 15f/1000f*Main.width, 43f/1000f*Main.height), "", Main.sty_ButtonEmpty))            
 		{

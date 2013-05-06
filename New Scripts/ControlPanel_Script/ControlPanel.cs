@@ -25,6 +25,7 @@ public class ControlPanel : MonoBehaviour {
 	AuxiliaryMoveModule AuxiliaryMove_Script;
 	SystemModule System_Script;//添加脚本SystemModule和MessageModule，姓名--刘旋，时间--2013-4-24
 	MessageModule Message_Script;
+	NCCodeFormat NCCodeFormat_Script;//代码格式化
 	#endregion
 	
 	#region Defined variable
@@ -282,8 +283,54 @@ public class ControlPanel : MonoBehaviour {
 	//内容--定义变量SystemFlip，用于System模式的显示，姓名--刘旋，时间--2013-4-24
 	public int SystemFlip=0;
 	public float ProgEDITCusor = 0;
-	public float ProgEDITCusorV = 0;
-	public float ProgEDITCusorH = 0;
+	
+	/// 记录当前光标的索引, 董帅 陈晓威， 2013-4-2
+	//EDIT模式下
+	//光标当前行
+	public int ProgEDITCusorV = 0;
+	//光标当前列
+	public int ProgEDITCusorH = 0;
+	//MDI模式下
+	public int MDIProgEDITCusorV = 0;
+	public int MDIProgEDITCusorH = 0;
+	/// 记录选中的代码的起点索引和终点索引  董帅  2013-4-2
+	public int SelectStart = 0;
+	public int SelectEnd = 0;
+	public int MDISelectStart = 0;
+	public int MDISelectEnd = 0;
+	//记录是否选择 陈晓威 
+	public bool IsSelect = false;
+	public bool needRecalc=false;
+	public bool editDisplay=true;
+	/// 记录程序分行的位置，董帅，2013-4-2
+	public int[] SeparatePos = new int[100000];
+	
+	public int[] MDISeparatePos = new int[100000];
+	
+	public int[] AUTOSeparatePos = new int[100000];
+	//记录选择的行数 
+	public int SelectRowNum = 0;
+	//public int ProgTotalRow = 0;
+	
+	//复制缓冲区 董帅 2013-4-10
+	public List<string> CodeBuffer = new List<string>();
+	//记录选择开始时前一个单词的位置 董帅 2013-4-10
+	public int SelStartCurV = 0;
+	public int SelStartCurH = 0;
+	
+	//是否选择代码首个 陈晓威
+	public bool isSelecFirst=false;
+	//用CodeForMDI来存放MDI中的代码  
+	public List<string> CodeForMDI = new List<string>();
+	
+	//auto模式下code 陈晓威
+	public List<string> CodeForAUTO = new List<string>();
+	public List<int>AutoRunItemRows=new List<int>();
+	public int AUTOStartRow=0;
+	public int AUTOEndRow=0;
+	public bool autoDisplayNormal=true;
+	public int autoSelecedProgRow=0;
+	
 	public float ProgEDITCusorPos = 0;
 	public bool ProgDNC = false;
 	public bool ProgAUTO = false;
@@ -307,6 +354,7 @@ public class ControlPanel : MonoBehaviour {
 	public List<string> FileNameList = new List<string>();
 	public List<int> FileSizeList = new List<int>();
 	public List<string> FileDateList = new List<string>();
+	//用CodeForAll来存放将ＮＣ代码分词后的结果 董帅 2013-4-3
 	public List<string> CodeForAll = new List<string>();
 	public List<List<string>> TempCodeList = new List<List<string>>();
 	
@@ -314,8 +362,13 @@ public class ControlPanel : MonoBehaviour {
 	public int[] RealNumArray = new int[9];
 	public string[] TempCodeArray = new string[9];
 	
+	// 当前显示的开始行索引和结束行索引 董帅 2013-4-2
 	public int StartRow = 0;
-	public int EndRow = 0;
+	public int EndRow = 9;
+	public int MDIStartRow = 0;
+	public int MDIEndRow = 9;
+	//检索结果标识
+	public bool NotFoundWarn = false;
 	public int TotalCodeNum = 0;
 	public int RealCodeNum = 1;
 	public int HorizontalNum = 1;
@@ -399,6 +452,8 @@ public class ControlPanel : MonoBehaviour {
 	
 	void Awake () 
 	{
+		gameObject.AddComponent("NCCodeFormat");
+		NCCodeFormat_Script=gameObject.GetComponent<NCCodeFormat>();
 		gameObject.AddComponent("PositionModule");
 		Position_Script = gameObject.GetComponent<PositionModule>();
 		gameObject.AddComponent("SystemModule");//添加脚本，姓名--刘旋，时间--2013-4-24
@@ -473,6 +528,7 @@ public class ControlPanel : MonoBehaviour {
 			ProgHAN = false;
 			ProgJOG = false;
 			ProgREF = false;
+			editDisplay=true;
 			break;
 		case 2:
 			t2d_ModeSelect = t2d_ModeSelectDNC;
@@ -506,6 +562,7 @@ public class ControlPanel : MonoBehaviour {
 			ProgHAN = false;
 			ProgJOG = false;
 			ProgREF = false;
+			editDisplay=false;
 			break;
 		case 5:
 			t2d_ModeSelect = t2d_ModeSelectHANDLE;
@@ -854,7 +911,8 @@ public class ControlPanel : MonoBehaviour {
 		sty_ProgSharedWindow.normal.background = (Texture2D)Resources.Load("Texture_Panel/Label/ProgSharedWindow");
 		
 		sty_EDITCursor.normal.background = (Texture2D)Resources.Load("Texture_Panel/Label/EditCursor");
-		
+		sty_EDITCursor.fontSize = 17;
+		sty_EDITCursor.fontStyle = FontStyle.Bold;
 		sty_EDITTextField.normal.background = (Texture2D)Resources.Load("Texture_Panel/Label/EditCursor");
 		sty_EDITTextField.normal.textColor = Color.yellow;
 		sty_EDITTextField.fontSize = 17;
@@ -906,7 +964,130 @@ public class ControlPanel : MonoBehaviour {
 	    tool_setting_cursor_y = 81.5f;
 	    tool_setting_cursor_w = 91.5f;
 		//刀偏界面完善---张振华---03.30
+		
+		/*---------------------AUTO模式下测试数据-----------------------*/
+			CodeForAUTO.Add("O0001");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("G21");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("M06");
+		CodeForAUTO.Add("T01");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("G54");
+		CodeForAUTO.Add("G90");
+		CodeForAUTO.Add("G00");
+		CodeForAUTO.Add("X0.");
+		CodeForAUTO.Add("Y0.");
+		CodeForAUTO.Add("Z50.");
+		CodeForAUTO.Add("Z51.");
+		CodeForAUTO.Add("Z52.");
+		CodeForAUTO.Add("Z53.");
+		CodeForAUTO.Add("Z54.");
+		CodeForAUTO.Add("Z55.");
+		CodeForAUTO.Add("Z56.");
+		CodeForAUTO.Add("Z57.");
+		CodeForAUTO.Add("Z58.");
+		CodeForAUTO.Add("Z59.");
+		CodeForAUTO.Add("Z60.");
+		CodeForAUTO.Add("Z61.");
+		CodeForAUTO.Add("Z62.");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("M3");
+		CodeForAUTO.Add("S800");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("M08");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("X0.646");
+		CodeForAUTO.Add("Y-8.648");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("G55");
+		CodeForAUTO.Add("S1000");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("G70");
+		CodeForAUTO.Add("X5.5");
+		CodeForAUTO.Add(";");
+		CodeForAUTO.Add("M3");
+		CodeForAUTO.Add(";");
+		SeparatePos = new int[100000];
+		AUTOSeparatePos=new int[100000];
+		//AutoDisplayFindRows(2,true);
 	}
+	
+	void ExchangeInt(ref int a, ref int b)
+	{
+		int temp;
+		temp = a;
+		a = b;
+		b = temp;
+	}
+	public void ExchangeVar()
+	{
+		List<string> CodeForExchage = null;
+		CodeForExchage = CodeForAll;
+		CodeForAll = CodeForMDI;
+		CodeForMDI = CodeForExchage;
+		int[] SepForExchange = null;
+		SepForExchange = SeparatePos;
+		SeparatePos = MDISeparatePos;  
+		MDISeparatePos = SepForExchange;
+		ExchangeInt(ref SelectEnd,ref MDISelectEnd);
+		ExchangeInt(ref SelectStart,ref MDISelectStart);
+		ExchangeInt(ref ProgEDITCusorH,ref MDIProgEDITCusorH);
+		ExchangeInt(ref ProgEDITCusorV,ref MDIProgEDITCusorV);
+		ExchangeInt(ref StartRow,ref MDIStartRow);
+		ExchangeInt(ref EndRow,ref MDIEndRow);
+	}
+	
+	public void AutoDisplayFindRows(int showRow,bool displayNormal)
+	{
+		
+		
+		Softkey_Script.calcSepo(CodeForAUTO,AUTOSeparatePos,320f);
+		this.autoDisplayNormal=displayNormal;
+		int index=0;
+		int irow=-1;
+		while(AUTOSeparatePos[index]!=0)
+		{
+			if(CodeForAUTO[AUTOSeparatePos[index]-1]==";")irow++;
+			if(irow==showRow)break;
+			index++;
+		}
+		//Debug.Log("index:"+index);
+		//Debug.Log("rrr"+irow);
+		//没找到的情况
+		if(irow!=showRow)
+		{
+			
+			
+		}
+		
+		int irowfrom=index;
+		while((irowfrom>0)&&(CodeForAUTO[AUTOSeparatePos[irowfrom-1]-1]!=";"))irowfrom--;
+		AutoRunItemRows.Clear();
+		//程序开始行
+		AutoRunItemRows.Add(irowfrom);
+		//程序结束行
+		AutoRunItemRows.Add(index);
+		
+		//Debug.Log("Ss"+irowfrom+"Ee"+index);
+		
+		int range=0;
+		if(displayNormal)
+			range=9;
+		else
+			range=4;
+		
+		AUTOStartRow=irowfrom/range*range;
+		AUTOEndRow=AUTOStartRow+range;
+		if(index>AUTOEndRow)
+		{
+			AUTOStartRow=irowfrom;
+			AUTOEndRow=irowfrom+range;
+		}
+
+	}
+	
+	
 	
 	void OnGUI()
 	{ 
@@ -1182,7 +1363,11 @@ public class ControlPanel : MonoBehaviour {
 		
 		if(ProgProtectWarn)
 			GUI.Label(new Rect(33f,372f/1000f*height,450f/1000f*width,300f/1000f*height),"WRITE PROTECT", sty_Warning);
-		
+		if(!ProgProtectWarn && NotFoundWarn)
+		{
+			GUI.Label(new Rect(33f,372f/1000f*height,450f/1000f*width,300f/1000f*height),"未找到字符!", sty_Warning);	
+			//NotFoundWarn = false;
+		}
 		if(EmergencyCtrl == false)
 			GUI.Label(new Rect(171f/1000f*width,395f/1000f*height,500f/1000f*width,300f/1000f*height),"*** ***", sty_Star);
 		 
