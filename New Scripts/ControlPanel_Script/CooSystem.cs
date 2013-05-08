@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 public class CooSystem : MonoBehaviour {
 	
@@ -41,8 +42,11 @@ public class CooSystem : MonoBehaviour {
 	public float [] write_tool_str = new float[400];
 	//刀偏界面加入---陈振华---03.30
 	
+	//加入坐标系组数---陈晓威---05.7
+	//public string[] GCodeStrs={"EXT","G54","G55","G56","G57","G58","G59"};
+	//public List<Vector3>CooList=new List<Vector3>();
+	
 	void Awake () {
-		
 	}
 	
 	// Use this for initialization
@@ -125,6 +129,7 @@ public class CooSystem : MonoBehaviour {
 			PlayerPrefs.SetString("SN_stop2", "0");
 			SN_stop2 = "0";
 		}
+		
 		//获得设置界面显示值
 		
 		ReadToolFile ();
@@ -365,6 +370,7 @@ public class CooSystem : MonoBehaviour {
 	//刀偏界面初始数据读取
 	public void ReadToolFile () 
 	{
+		/*
 		string line_str = "";
 		StreamReader line_str_reader;
 		FileStream tool_stream = new FileStream(Application.dataPath + SystemArguments.ToolParameterPath + "shape_H.txt", FileMode.OpenOrCreate, FileAccess.Read);
@@ -449,8 +455,48 @@ public class CooSystem : MonoBehaviour {
 			}
 		}
 		line_str_reader.Close();
+		*/
+		//陈晓威
+		for(int index=0;index<400;index++)
+		{
+			
+			if(PlayerPrefs.HasKey("shape_H"+index)){
+				this.shape_H[index]=PlayerPrefs.GetFloat("shape_H"+index);
+			}
+			else
+			{
+				PlayerPrefs.SetFloat("shape_H"+index,0);
+				this.shape_H[index]=0;
+			}
+			
+			if(PlayerPrefs.HasKey("wear_H"+index))
+				this.wear_H[index]=PlayerPrefs.GetFloat("wear_H"+index);
+			else
+			{
+				PlayerPrefs.SetFloat("wear_H"+index,0);
+				this.wear_H[index]=0;
+			}
+			
+			if(PlayerPrefs.HasKey("shape_D"+index))
+				this.shape_D[index]=PlayerPrefs.GetFloat("shape_D"+index);
+			else
+			{
+				PlayerPrefs.SetFloat("shape_D"+index,0);
+				this.shape_D[index]=0;
+			}
+			
+			if(PlayerPrefs.HasKey("wear_D"+index))
+				this.wear_D[index]=PlayerPrefs.GetFloat("wear_D"+index);
+			else
+			{
+				PlayerPrefs.SetFloat("wear_D"+index,0);
+				this.wear_D[index]=0;
+			}
+			
+		}	
+
 	}
-	
+	/*
 	//刀偏写入功能
 	void WriteToolFile (string filename)
 	{
@@ -491,7 +537,7 @@ public class CooSystem : MonoBehaviour {
 		}
 		line_str_writer.Close();
 	}
-	
+	*/
 	//刀偏c输入功能
 	public void C_Input (string tool_value)
 	{
@@ -552,9 +598,37 @@ public class CooSystem : MonoBehaviour {
 			Write_choose(value_f, 3);
 	}
 	
-	//刀偏输入框选择
+	//刀偏输入框选择-陈晓威
 	void Write_choose (float value_f, int mode_flag) 
 	{
+		//Debug.Log(Main.tool_setting+"OOO");
+		//Debug.Log(Main.number+"NNN");
+		float[] aimArray=null;
+		string playerprefsArray=null;
+		//Debug.Log("type:"+Main.tool_setting%4);
+		switch(Main.tool_setting%4)
+		{
+		case 1:aimArray=shape_H;playerprefsArray="shape_H";break;
+		case 2:aimArray=wear_H;playerprefsArray="wear_H";break;
+		case 3:aimArray=shape_D;playerprefsArray="shape_D";break;
+		case 0:aimArray=wear_D;playerprefsArray="wear_D";break;
+		}
+		int pos=Main.tool_setting;
+		if(pos%4==0)pos--;
+		pos=pos/4+Main.number;
+		//Debug.Log(pos+"pos");
+		
+		if(mode_flag == 1||mode_flag==3)
+		{
+			aimArray[pos]=value_f;
+		}
+		else if(mode_flag == 2)
+		{
+			aimArray[pos]+=value_f;	
+		}
+		PlayerPrefs.SetFloat(playerprefsArray+pos,aimArray[pos]);
+		//Debug.Log("RRR"+" "+(playerprefsArray+pos)+PlayerPrefs.GetFloat(playerprefsArray+pos));
+		/*
 		switch(Main.tool_setting)
 		{
 		case 1:
@@ -848,6 +922,8 @@ public class CooSystem : MonoBehaviour {
 		default:
 			break;
 		}	
+		
+		*/
 	}
 	
 	//设定界面下移
@@ -1093,6 +1169,16 @@ public class CooSystem : MonoBehaviour {
 	//参数界面内容
 	public void ReadCooFile () 
 	{
+		ReedCool("G00",ref this.G00_pos);
+		//Debug.Log("test++:"+this.G00_pos.x+" "+this.G00_pos.y+" "+this.G00_pos.z);
+		ReedCool("G54",ref this.G54_pos);
+		ReedCool("G55",ref this.G55_pos);
+		ReedCool("G56",ref this.G56_pos);
+		ReedCool("G57",ref this.G57_pos);
+		ReedCool("G58",ref this.G58_pos);
+		ReedCool("G59",ref this.G59_pos);
+		
+		/*
 		string line_str = "";
 		string[] coo_str;
 		StreamReader line_str_reader;
@@ -1215,8 +1301,10 @@ public class CooSystem : MonoBehaviour {
 			G59_pos.z = float.Parse(coo_str[2]);
 		}
 		line_str_reader.Close();
+		*/
+		
 	}
-	
+	/*
 	void WriteCooFile (string filename, string write_str)
 	{
 		StreamWriter line_str_writer;
@@ -1230,10 +1318,28 @@ public class CooSystem : MonoBehaviour {
 		line_str_writer.WriteLine(write_str);
 		line_str_writer.Close();
 	}
-	
-
+	*/
+	//简化代码 陈晓威 05-08
 	public void Down () 
 	{
+		//Debug.Log(Main.coo_setting_1+" Y1");
+		//Debug.Log(Main.coo_setting_2+" Y2");
+		if(!(Main.coo_setting_1==7&&Main.coo_setting_2==3))
+		{
+			if(Main.coo_setting_2<3)
+			{	
+				Main.coo_setting_2++;
+			}
+			else
+			{
+				Main.coo_setting_2=1;
+				Main.coo_setting_1++;
+			}
+			if(Main.coo_setting_1==5)
+				Main.OffCooFirstPage = false;
+			CooCursorPos();
+		}
+		/*
 		switch (Main.coo_setting_1)
 		{
 		case 1:
@@ -1317,10 +1423,29 @@ public class CooSystem : MonoBehaviour {
 			CooCursorPos();
 			break;
 		}
+		*/
+		
 	}
-	
+	//简化代码 陈晓威 05-08
 	public void Up () 
 	{
+		if(!(Main.coo_setting_1==1&&Main.coo_setting_2==1))
+		{
+			if(Main.coo_setting_2>1)
+			{	
+				Main.coo_setting_2--;
+			}
+			else
+			{
+				Main.coo_setting_2=3;
+				Main.coo_setting_1--;
+			}
+			if(Main.coo_setting_1==4)
+				Main.OffCooFirstPage = true;
+			CooCursorPos();
+		}
+		
+		/*
 		switch(Main.coo_setting_1)
 		{
 		case 1:
@@ -1404,6 +1529,10 @@ public class CooSystem : MonoBehaviour {
 			CooCursorPos();
 			break;
 		}
+		*/
+		
+		
+		
 	}
 	
 	public void Left () 
@@ -1577,10 +1706,9 @@ public class CooSystem : MonoBehaviour {
 	
 	public void CooCursorPos () 
 	{
-		switch(Main.coo_setting_1)
+		switch(Main.coo_setting_1%4)
 		{
 		case 1:
-		case 5:
 			Main.coo_setting_cursor_x = 131f;
 			if(Main.coo_setting_2 == 1)
 				Main.coo_setting_cursor_y = 120f;
@@ -1590,7 +1718,6 @@ public class CooSystem : MonoBehaviour {
 				Main.coo_setting_cursor_y = 180f;
 			break;
 		case 2:
-		case 6:
 			Main.coo_setting_cursor_x = 131f;
 			if(Main.coo_setting_2 == 1)
 				Main.coo_setting_cursor_y = 240f;
@@ -1600,7 +1727,6 @@ public class CooSystem : MonoBehaviour {
 				Main.coo_setting_cursor_y = 300f;
 			break;
 		case 3:
-		case 7:
 			Main.coo_setting_cursor_x = 376f;
 			if(Main.coo_setting_2 == 1)
 				Main.coo_setting_cursor_y = 120f;
@@ -1609,7 +1735,7 @@ public class CooSystem : MonoBehaviour {
 			else
 				Main.coo_setting_cursor_y = 180f;
 			break;
-		case 4:
+		case 0:
 			Main.coo_setting_cursor_x = 376f;
 			if(Main.coo_setting_2 == 1)
 				Main.coo_setting_cursor_y = 240f;
@@ -1777,6 +1903,7 @@ public class CooSystem : MonoBehaviour {
 	
 	void Measure_choose (int xyz_select, float value_f, int mode_flag) 
 	{
+		//Debug.Log(Main.coo_setting_1+"PPP");
 		string write_str = "";
 		switch(Main.coo_setting_1)
 		{
@@ -1790,7 +1917,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G00_pos.x = value_f; 
 				write_str = G00_pos.x+","+G00_pos.y+","+G00_pos.z;
-				WriteCooFile("G00", write_str);
+				//WriteCooFile("G00", write_str);
+				SaveCool("G00",this.G00_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1801,7 +1929,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G00_pos.y = value_f; 
 				write_str = G00_pos.x+","+G00_pos.y+","+G00_pos.z;
-				WriteCooFile("G00", write_str);
+				//WriteCooFile("G00", write_str);
+				SaveCool("G00",this.G00_pos);
 			}
 			else
 			{
@@ -1812,7 +1941,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G00_pos.z = value_f; 
 				write_str = G00_pos.x+","+G00_pos.y+","+G00_pos.z;
-				WriteCooFile("G00", write_str);
+				//WriteCooFile("G00", write_str);
+				SaveCool("G00",this.G00_pos);
 			}
 			Main.OffCooFirstPage = true;
 			Workpiece_Change();
@@ -1827,7 +1957,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G54_pos.x = value_f; 
 				write_str = G54_pos.x+","+G54_pos.y+","+G54_pos.z;
-				WriteCooFile("G54", write_str);
+				//WriteCooFile("G54", write_str);
+				SaveCool("G54",this.G54_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1838,7 +1969,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G54_pos.y = value_f; 
 				write_str = G54_pos.x+","+G54_pos.y+","+G54_pos.z;
-				WriteCooFile("G54", write_str);
+				//WriteCooFile("G54", write_str);
+				SaveCool("G54",this.G54_pos);
 			}
 			else
 			{
@@ -1849,7 +1981,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G54_pos.z = value_f; 
 				write_str = G54_pos.x+","+G54_pos.y+","+G54_pos.z;
-				WriteCooFile("G54", write_str);
+				//WriteCooFile("G54", write_str);
+				SaveCool("G54",this.G54_pos);
 			}
 			Main.OffCooFirstPage = true;
 			Workpiece_Change();
@@ -1864,7 +1997,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G55_pos.x = value_f; 
 				write_str = G55_pos.x+","+G55_pos.y+","+G55_pos.z;
-				WriteCooFile("G55", write_str);
+				//WriteCooFile("G55", write_str);
+				SaveCool("G55",this.G55_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1875,7 +2009,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G55_pos.y = value_f; 
 				write_str = G55_pos.x+","+G55_pos.y+","+G55_pos.z;
-				WriteCooFile("G55", write_str);
+				//WriteCooFile("G55", write_str);
+				SaveCool("G55",this.G55_pos);
 			}
 			else
 			{
@@ -1886,7 +2021,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G55_pos.z = value_f; 
 				write_str = G55_pos.x+","+G55_pos.y+","+G55_pos.z;
-				WriteCooFile("G55", write_str);
+				//WriteCooFile("G55", write_str);
+				SaveCool("G55",this.G55_pos);
 			}
 			Main.OffCooFirstPage = true;
 			Workpiece_Change();
@@ -1901,7 +2037,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G56_pos.x = value_f; 
 				write_str = G56_pos.x+","+G56_pos.y+","+G56_pos.z;
-				WriteCooFile("G56", write_str);
+				//WriteCooFile("G56", write_str);
+				SaveCool("G56",this.G56_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1912,7 +2049,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G56_pos.y = value_f;
 				write_str = G56_pos.x+","+G56_pos.y+","+G56_pos.z;
-				WriteCooFile("G56", write_str);
+				//WriteCooFile("G56", write_str);
+				SaveCool("G56",this.G56_pos);
 			}
 			else
 			{
@@ -1923,7 +2061,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G56_pos.z = value_f;
 				write_str = G56_pos.x+","+G56_pos.y+","+G56_pos.z;
-				WriteCooFile("G56", write_str);
+				//WriteCooFile("G56", write_str);
+				SaveCool("G56",this.G56_pos);
 			}
 			Main.OffCooFirstPage = true;
 			Workpiece_Change();
@@ -1938,7 +2077,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G57_pos.x = value_f;
 				write_str = G57_pos.x+","+G57_pos.y+","+G57_pos.z;
-				WriteCooFile("G57", write_str);
+				//WriteCooFile("G57", write_str);
+				SaveCool("G57",this.G57_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1949,7 +2089,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G57_pos.y = value_f;
 				write_str = G57_pos.x+","+G57_pos.y+","+G57_pos.z;
-				WriteCooFile("G57", write_str);
+				//WriteCooFile("G57", write_str);
+				SaveCool("G57",this.G57_pos);
 			}
 			else
 			{
@@ -1960,7 +2101,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G57_pos.z = value_f;
 				write_str = G57_pos.x+","+G57_pos.y+","+G57_pos.z;
-				WriteCooFile("G57", write_str);
+				//WriteCooFile("G57", write_str);
+				SaveCool("G57",this.G57_pos);
 			}
 			Main.OffCooFirstPage = false;
 			Workpiece_Change();
@@ -1975,7 +2117,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G58_pos.x = value_f;
 				write_str = G58_pos.x+","+G58_pos.y+","+G58_pos.z;
-				WriteCooFile("G58", write_str);
+				//WriteCooFile("G58", write_str);
+				SaveCool("G58",this.G58_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -1986,7 +2129,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G58_pos.y = value_f;
 				write_str = G58_pos.x+","+G58_pos.y+","+G58_pos.z;
-				WriteCooFile("G58", write_str);
+				//WriteCooFile("G58", write_str);
+				SaveCool("G58",this.G58_pos);
 			}
 			else
 			{
@@ -1997,7 +2141,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G58_pos.z = value_f;
 				write_str = G58_pos.x+","+G58_pos.y+","+G58_pos.z;
-				WriteCooFile("G58", write_str);
+				//WriteCooFile("G58", write_str);
+				SaveCool("G58",this.G58_pos);
 			}
 			Main.OffCooFirstPage = false;
 			Workpiece_Change();
@@ -2012,7 +2157,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G59_pos.x = value_f;
 				write_str = G59_pos.x+","+G59_pos.y+","+G59_pos.z;
-				WriteCooFile("G59", write_str);
+				//WriteCooFile("G59", write_str);
+				SaveCool("G59",this.G59_pos);
 			}
 			else if(xyz_select == 2)
 			{
@@ -2023,7 +2169,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G59_pos.y = value_f;
 				write_str = G59_pos.x+","+G59_pos.y+","+G59_pos.z;
-				WriteCooFile("G59", write_str);
+				//WriteCooFile("G59", write_str);
+				SaveCool("G59",this.G59_pos);
 			}
 			else
 			{
@@ -2034,7 +2181,8 @@ public class CooSystem : MonoBehaviour {
 				else
 					G59_pos.z = value_f;
 				write_str = G59_pos.x+","+G59_pos.y+","+G59_pos.z;
-				WriteCooFile("G59", write_str);
+				//WriteCooFile("G59", write_str);
+				SaveCool("G59",this.G59_pos);
 			}
 			Main.OffCooFirstPage = false;
 			Workpiece_Change();
@@ -2081,4 +2229,50 @@ public class CooSystem : MonoBehaviour {
 			break;
 		}
 	}
+	
+	/// <summary>
+	/// 从PlayerPrefs读取坐标系---陈晓威 05-08
+	/// </summary>
+	/// <param name='cooname'>
+	/// 坐标系名称
+	/// </param>
+	/// <param name='vt3'>
+	/// 坐标系向量
+	/// </param>
+	public void ReedCool(string cooname,ref Vector3 vt3)
+	{
+		string coostr;
+		string[]templist;
+		if(PlayerPrefs.HasKey(cooname))
+		{
+			coostr=PlayerPrefs.GetString(cooname);
+			templist=coostr.Split(',');
+			vt3.Set(float.Parse(templist[0]),float.Parse(templist[1]),float.Parse(templist[2]));
+		}
+		else
+		{
+			PlayerPrefs.SetString(cooname,"0,0,0");
+			vt3.Set(0,0,0);
+		}
+		//Debug.Log("bf++"+vt3.x+" "+vt3.y+" "+vt3.z);
+		
+	}
+	
+	
+	/// <summary>
+	/// 把坐标系保存到PlayerPrefs---陈晓威 05-08
+	/// </summary>
+	/// <param name='cooname'>
+	/// 坐标系名称
+	/// </param>
+	/// <param name='ct3'>
+	/// 坐标系向量
+	/// </param>
+	public void SaveCool(string cooname,Vector3 ct3)
+	{
+		PlayerPrefs.SetString(cooname,ct3.x+","+ct3.y+","+ct3.z);
+		//Debug.Log(cooname);
+	}
+	
+	
 }
